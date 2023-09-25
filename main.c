@@ -1,14 +1,18 @@
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 int check_args(int argc);
 int break_system(char *comando);
+int check_signal(char *string);
 void sequential_execute(char *comandos);
 void *parallel_execute(void *comando);
+void redirect(const char *comandoArquivo);
 void file_execute(const char *filename);
 
 int main(int argc, char *argv[]) {
@@ -82,6 +86,16 @@ int break_system(char *comando) {
   }
 }
 
+int check_signal(char *string) {
+  while (*string) {
+    if (*string == '>') {
+      return 1;
+    }
+    string++;
+  }
+  return 0;
+}
+
 void sequential_execute(char *comandos) {
   pid_t child = fork();
   if (child == -1) {
@@ -107,9 +121,13 @@ void sequential_execute(char *comandos) {
         }
 
         if (grandson == 0) {
-          execlp("/bin/sh", "sh", "-c", comando, NULL);
-          perror("execlp");
-          exit(1);
+          if (check_signal(comando)) {
+            redirect(comando);
+          } else {
+            execlp("/bin/sh", "sh", "-c", comando, NULL);
+            perror("execlp");
+            exit(1);
+          }
         } else {
           wait(NULL);
         }
@@ -135,6 +153,10 @@ void *parallel_execute(void *comandos) {
       command++;
     }
 
+    if (check_signal(command)) {
+      redirect(command);
+    }
+
     if (strlen(command) > 0) {
       pthread_t thread;
       int *status = malloc(sizeof(int));
@@ -156,6 +178,67 @@ void *parallel_execute(void *comandos) {
   }
 
   pthread_exit(NULL);
+}
+
+void redirect(const char *comandoArquivo) {
+  int fd[2];
+  pid_t pid;
+
+  if (pipe(fd) == -1) {
+    perror("Error while creating pipe");
+    exit(EXIT_FAILURE);
+  }
+
+  pid = fork();
+
+  if (pid == -1) {
+    perror("Fork failed");
+    exit(EXIT_FAILURE);
+  }
+
+  if (pid == 0) {
+    close(fd[0]);
+
+    dup2(fd[1], STDOUT_FILENO);
+    close(fd[1]);
+
+    char *comando = strdup(comandoArquivo);
+    char *saveptr;
+    char *token = strtok_r(comando, ">", &saveptr);
+
+    if (token) {
+      execlp("/bin/sh", "sh", "-c", token, NULL);
+      perror("execlp");
+      exit(1);
+    }
+  } else {
+    close(fd[1]);
+
+    char *comando = strdup(comandoArquivo);
+    char *saveptr;
+    strtok_r(comando, ">", &saveptr);
+    char *nomeArquivo = strtok_r(NULL, ">", &saveptr);
+
+    char *trimmedNomeArquivo = strtok(nomeArquivo, " \t\n\r\f\v");
+
+    int file = open(trimmedNomeArquivo, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (file == -1) {
+      perror("Error while creating file");
+      exit(EXIT_FAILURE);
+    }
+
+    char buffer[4096];
+    ssize_t read_bytes;
+
+    while ((read_bytes = read(fd[0], buffer, sizeof(buffer))) > 0) {
+      if (write(file, buffer, read_bytes) == -1) {
+        perror("Error while writing on file");
+        exit(EXIT_FAILURE);
+      }
+    }
+    close(file);
+    wait(NULL);
+  }
 }
 
 void file_execute(const char *filename) {
