@@ -15,6 +15,8 @@ void *parallel_execute(void *comando);
 void redirect(const char *comandoArquivo);
 void file_execute(const char *filename);
 
+char *last = NULL;
+
 int main(int argc, char *argv[]) {
   size_t tamanho_arg = 0;
   ssize_t tamanho_linha;
@@ -33,6 +35,23 @@ int main(int argc, char *argv[]) {
 
       if (break_system(comando)) {
         break;
+      }
+
+      if (strcmp(comando, "!!") == 0) {
+        if (last == NULL) {
+          printf("No commands\n");
+        } else {
+          comando = strdup(last);
+        }
+      }
+
+      if (last) {
+        free(last);
+      }
+      last = strdup(comando);
+
+      if (strcmp(comando, "!!") == 0) {
+        continue;
       }
 
       if (strcmp(comando, "style parallel") == 0) {
