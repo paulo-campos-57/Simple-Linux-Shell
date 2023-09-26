@@ -1,2 +1,0 @@
-locate gcc; ls; free; date; 
-exit
