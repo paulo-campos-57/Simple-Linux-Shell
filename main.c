@@ -68,9 +68,47 @@ int main(int argc, char *argv[]) {
       if (strcmp(style, "seq") == 0) {
         sequential_execute(comando);
       } else if (strcmp(style, "par") == 0) {
-        pthread_t thread;
-        pthread_create(&thread, NULL, parallel_execute, (void *)comando);
-        pthread_join(thread, NULL);
+        pthread_t *threads = NULL;
+        int qtd_threads = 0;
+
+        char **parallel_commands = NULL;
+        int qtd_commands = 0;
+
+        char *separador = strtok(comando, ";");
+        while (separador != NULL) {
+          char *aux_separador = strdup(separador);
+          parallel_commands = (char **)realloc(parallel_commands, (qtd_commands + 1) * sizeof(char *));
+          if (parallel_commands == NULL) {
+            perror("Error while allocating memory\n");
+            exit(EXIT_FAILURE);
+          }
+          parallel_commands[qtd_commands++] = aux_separador;
+          separador = strtok(NULL, ";");
+        }
+        threads = (pthread_t *)malloc(qtd_commands * sizeof(pthread_t));
+
+        if (threads == NULL) {
+          perror("Error while allocating memory for the threads\n");
+          exit(EXIT_FAILURE);
+        }
+        
+        for (int i = 0; i < qtd_commands; i++) {
+          if (pthread_create(&threads[i], NULL, parallel_execute, parallel_commands[i]) != 0) {
+            perror("Error while creating thread\n");
+          }
+          qtd_threads++;
+        }
+
+        for (int i = 0; i < qtd_threads; i++) {
+          pthread_join(threads[i], NULL);
+        }
+
+        for (int i = 0; i < qtd_commands; i++) {
+          free(parallel_commands[i]);
+        }
+
+        free(parallel_commands);
+        free(threads);
       }
     }
   } else if (check_args(argc) == 1) {
@@ -159,44 +197,10 @@ void sequential_execute(char *comandos) {
   }
 }
 
-void *parallel_execute(void *comandos) {
-  char *comando = (char *)comandos;
-  char *aux;
-  char *saveptr;
-
-  aux = strtok_r(comando, ";", &saveptr);
-
-  while (aux != NULL) {
-    char *command = aux;
-    while (*command == ' ' || *command == '\t') {
-      command++;
-    }
-
-    if (check_signal(command)) {
-      redirect(command);
-    }
-
-    if (strlen(command) > 0) {
-      pthread_t thread;
-      int *status = malloc(sizeof(int));
-      if (status == NULL) {
-        perror("Memory allocation error");
-        exit(EXIT_FAILURE);
-      }
-
-      *status = system(command);
-
-      if (*status != 0) {
-        fprintf(stderr, "Error while executing command: %s\n", command);
-      }
-
-      free(status);
-    }
-
-    aux = strtok_r(NULL, ";", &saveptr);
-  }
-
-  pthread_exit(NULL);
+void *parallel_execute(void *comando) {
+  char *cmd = (char *)comando;
+  system(cmd);
+  return NULL;
 }
 
 void redirect(const char *comandoArquivo) {
