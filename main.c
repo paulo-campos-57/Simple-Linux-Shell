@@ -10,9 +10,11 @@
 int check_args(int argc);
 int break_system(char *comando);
 int check_signal(char *string);
+int check_double_signal(char *string);
 void sequential_execute(char *comandos);
 void *parallel_execute(void *comando);
 void redirect(const char *comandoArquivo);
+void redirect_append(char *comando);
 void file_execute(const char *filename);
 
 char *last = NULL;
@@ -153,6 +155,16 @@ int check_signal(char *string) {
   return 0;
 }
 
+int check_double_signal(char *string) {
+    while (*string != '\0' && *(string + 1) != '\0') {
+    if (*string == '>' && *(string + 1) == '>') {
+      return 1;
+    }
+    string++;
+  }
+  return 0;
+}
+
 void sequential_execute(char *comandos) {
   pid_t child = fork();
   if (child == -1) {
@@ -178,7 +190,9 @@ void sequential_execute(char *comandos) {
         }
 
         if (grandson == 0) {
-          if (check_signal(comando)) {
+          if (check_double_signal(comando)) {
+            redirect_append(comando);
+          }else if (check_signal(comando)) {
             redirect(comando);
           } else {
             execlp("/bin/sh", "sh", "-c", comando, NULL);
@@ -262,6 +276,31 @@ void redirect(const char *comandoArquivo) {
     close(file);
     wait(NULL);
   }
+}
+
+void redirect_append(char *comando) {
+  char *saida = strstr(comando, ">>");
+  if (saida != NULL) {
+    *saida = '\0';
+    char *file_name = strtok(saida + 2, " \t\n");
+    if (file_name != NULL) {
+      int fd = open(file_name, O_WRONLY | O_CREAT | O_APPEND, 0644);
+      if (fd != -1) {
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+      } else {
+        perror("Error while opening file for addition\n");
+        return;
+      }
+    } else {
+      perror("No file name found after >> \n");
+      return;
+    }
+  }
+
+  execlp("/bin/sh", "sh", "-c", comando, (char *)NULL);
+  perror("execlp");
+  exit(1);
 }
 
 void file_execute(const char *filename) {
