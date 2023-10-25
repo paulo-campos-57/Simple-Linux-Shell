@@ -12,9 +12,9 @@ This is a simple version of a linux shell, made using C language, developed by <
 <table>
   <tr>- After clone the repository, you need to compile the shell by using the command "make" in your terminal;</tr><br>
   <tr>- Once it's compiled, you can run the program with ./shell;</tr><br>
-  <tr>- The program can be used on interactive form or recieving commands from external file;</tr><br>
+  <tr>- The program can be used on interactive form or receiving commands from external file;</tr><br>
   <tr>- To run the interactive mode, it's only necessary to run the ./shell;</tr><br>
-  <tr>- To recieve commands, you need to pass them by command line, example: ./shell arguments.txt;</tr><br>
+  <tr>- To receive commands, you need to pass them by command line, example: ./shell arguments.txt;</tr><br>
   <tr>- To end the execution, you can type the command "exit" or press "Ctrl+D";</tr><br>
   <tr>- You can delete the executable of your directory using the command "make clean";</tr><br>
 </table>
