@@ -11,10 +11,12 @@ int check_args(int argc);
 int break_system(char *comando);
 int check_signal(char *string);
 int check_double_signal(char *string);
+int check_pipe_signal(char *string);
 void sequential_execute(char *comandos);
 void *parallel_execute(void *comando);
 void redirect(const char *comandoArquivo);
 void redirect_append(char *comando);
+void pipe_execute(char *comando);
 void file_execute(const char *filename);
 
 char *last = NULL;
@@ -165,6 +167,16 @@ int check_double_signal(char *string) {
   return 0;
 }
 
+int check_pipe_signal(char *string) {
+    while (*string) {
+    if (*string == '|') {
+      return 1;
+    }
+    string++;
+  }
+  return 0;
+}
+
 void sequential_execute(char *comandos) {
   pid_t child = fork();
   if (child == -1) {
@@ -194,6 +206,8 @@ void sequential_execute(char *comandos) {
             redirect_append(comando);
           }else if (check_signal(comando)) {
             redirect(comando);
+          } else if (check_pipe_signal(comando)) {
+            pipe_execute(comando);
           } else {
             execlp("/bin/sh", "sh", "-c", comando, NULL);
             perror("execlp");
@@ -301,6 +315,62 @@ void redirect_append(char *comando) {
   execlp("/bin/sh", "sh", "-c", comando, (char *)NULL);
   perror("execlp");
   exit(1);
+}
+
+void pipe_execute(char *comando) {
+  char *first = strtok(comando, "|");
+  char *second = strtok(NULL, "|");
+
+  if (first != NULL && second != NULL) {
+    int pipe_fd[2];
+
+    if (pipe(pipe_fd) == -1) {
+      perror("Error while creating pipe\n");
+      exit(EXIT_FAILURE);
+    }
+
+    pid_t first_son = fork();
+    if (first_son == -1) {
+        perror("Fork failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (first_son == 0) {
+      close(pipe_fd[0]);
+
+      dup2(pipe_fd[1], STDOUT_FILENO);
+      close(pipe_fd[1]);
+
+      execlp("/bin/sh", "sh", "-c", first, (char *)NULL);
+      perror("execlp");
+      exit(1);
+    }
+
+    pid_t second_son = fork();
+
+    if (second_son == -1) {
+      perror("Fork failed");
+      exit(EXIT_FAILURE);
+    }
+
+    if (second_son == 0) {
+      close(pipe_fd[1]);
+
+      dup2(pipe_fd[0], STDIN_FILENO);
+      close(pipe_fd[0]);
+
+      execlp("/bin/sh", "sh", "-c", second, (char *)NULL);
+      perror("execlp");
+      exit(1);
+    }
+    close(pipe_fd[0]);
+    close(pipe_fd[1]);
+
+    waitpid(first_son, NULL, 0);
+    waitpid(second_son, NULL, 0);
+  } else {
+    printf("Invalid command for pipe\n");
+  }
 }
 
 void file_execute(const char *filename) {
