@@ -26,9 +26,10 @@ int main(int argc, char *argv[]) {
   ssize_t tamanho_linha;
   if (check_args(argc) == 0) {
     char *comando;
+    char *user = getlogin();
     char style[4] = "seq";
     while (1) {
-      printf("pmc3 %s>", style);
+      printf("%s %s>",user, style);
       fflush(stdout);
 
       getline(&comando, &tamanho_arg, stdin);
