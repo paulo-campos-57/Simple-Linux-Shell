@@ -1,4 +1,4 @@
-# Simple-Linux-Shell
+# Simple-Linux-Shell<img align="center" alt="Linux" height="30" width="40" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linux/linux-original.svg">
 <h3>To run this repository, it's necessary to be on a unix or macOs system</h3>
 <h4>Description</h4>
 This is a simple version of a linux shell, made using C language, developed by <a href="https://github.com/paulo-campos-57" target="_blank">Paulo Campos</a>;
