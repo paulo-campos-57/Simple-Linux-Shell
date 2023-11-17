@@ -76,20 +76,6 @@ Esta é uma versão simplificada de um shell linux, desenvolvido em linguagem C,
   <tr>- Certifique-se que o Makefile está instalado em seu computador;</tr><br>
 </table>
 
-
-<h4>Requirements</h4>
-<table>
-  <tr>- It's necessary to be on a unix or macOs system;</tr><br>
-  <tr>
-    - You'll have to clone the repository to your machine using command:
-  <dt>
-
-      git clone https://github.com/paulo-campos-57/Simple-Linux-Shell.git
-  </dt>
-  </tr>
-  <tr>- Make sure that Makefile is installed in you computer;</tr><br>
-</table>
-
 <h4>Como rodar</h4>
 <table>
   <tr>- Depois de clonar o repositório, você deve compilar usando o comando:
